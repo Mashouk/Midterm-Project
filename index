@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Display Landcover Classes with Editable Pop-ups</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="" />
+
+  <!-- calls for the arcgis api's CSS file and JS library. -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.25/esri/themes/light/main.css">
+  <script src="https://js.arcgis.com/4.25/"></script>
+
+  <!-- css to make a full screen map -->
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%; 
+      width: 100%;
+    }
+  </style>
+
+</head>
+<body>
+
+  <!-- the div to display the map  -->
+  <div id="viewDiv"></div>
+
+  <!-- JavaScript code -->
+  <script>
+    require([
+      "esri/config",
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/Graphic",
+      "esri/layers/FeatureLayer",
+      "esri/widgets/Popup",
+      "esri/widgets/Legend",
+      "esri/widgets/Editor",
+      "esri/widgets/ScaleBar",
+      "esri/widgets/Search",
+      "esri/widgets/FeatureForm"
+    ], function (esriConfig, Map, MapView, Graphic, FeatureLayer, Popup, Legend, Editor, ScaleBar, Search, FeatureForm) {
+      esriConfig.apiKey = "AAPK9c576cbd3a844e7791c0d5901d6d1b876W9Kwr0mfce5WFBsw3WmfabQ1sD8IBrqASyYAbSi22UUfDN4txoxY5y-bIM1jVhR";
+
+      const map = new Map({
+        basemap: "arcgis-topographic"
+      });
+
+      const view = new MapView({
+        map: map,
+        center: [-82.3248, 29.6516], // Coordinates for Gainesville, Florida
+        zoom: 10,
+        container: "viewDiv"
+      });
+
+      const popupTemplate = {
+        title: "Landcover Class: {LULC}",
+        content: [{
+          type: "fields",
+          fieldInfos: [{
+            fieldName: "LULC",
+            label: "Landcover Class",
+            isEditable: true
+          }, {
+            fieldName: "Description",
+            label: "Description",
+            isEditable: true
+          }, {
+            fieldName: "Photo",
+            label: "Photo",
+            isEditable: true,
+            visible: true,
+            format: {
+              type: "image"
+            }
+          }]
+        }],
+        // Enable editing for the popup
+        editable: true
+      };
+
+      const featureLayer = new FeatureLayer({
+        url: "https://services.arcgis.com/LBbVDC0hKPAnLRpO/arcgis/rest/services/Gainesville_Training_Data_/FeatureServer",
+        outFields: ["LULC", "Description", "Photo"],
+        popupTemplate: popupTemplate,
+        // Enable editing for the feature layer
+        editingEnabled: true
+      });
+
+      map.add(featureLayer);
+
+      // Add Legend widget
+      const legend = new Legend({
+        view: view,
+        title: "Gainesville Training Data" // Custom legend title
+      });
+
+      view.ui.add(legend, "bottom-right");
+
+      // Add Editor widget
+      const editor = new Editor({
+        view: view
+      });
+
+      view.ui.add(editor, "top-right");
+
+      // Add ScaleBar widget
+      const scaleBar = new ScaleBar({
+        view: view
+      });
+
+      view.ui.add(scaleBar, "bottom-left");
+
+      // Add Search widget
+      const searchWidget = new Search({
+        view: view,
+        sources: [{
+          featureLayer: featureLayer,
+          searchFields: ["LULC"],
+          displayField: "LULC",
+          exactMatch: false,
+          outFields: ["*"],
+          name: "Landcover Search",
+          placeholder: "Search by Landcover Class"
+        }],
+        container: document.createElement("div")
+      });
+
+      view.ui.add(searchWidget, {
+        position: "top-left",
+        index: 0
+      });
+
+      // Listen for the layer's editing event and update the popup
+      featureLayer.on("edits", function(event) {
+        if (event.addedFeatures.length > 0) {
+          event.addedFeatures.forEach(function(feature) {
+            view.popup.open({
+              features: [feature],
+              updateLocationEnabled: true
+            });
+          });
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
